@@ -174,6 +174,7 @@ const styles = StyleSheet.create({
     color: Colors.primaryDark,
     letterSpacing: 0.5,
   },
+
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",

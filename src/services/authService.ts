@@ -1,58 +1,66 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserAccount } from '../types';
+import {
+  fetchUserFromNeon,
+  fetchAllUsersFromNeon,
+  upsertUserToNeon,
+} from './neonClient';
 
 const STORAGE_KEY_AUTH_USER = '@kirana_auth_user_v1';
 const STORAGE_KEY_ALL_ACCOUNTS = '@kirana_all_accounts_v1';
 
-export const DEMO_USERS: UserAccount[] = [
-  {
-    id: 'user_ramesh',
-    name: 'Ramesh',
-    emailOrPhone: '9876543210',
-    avatarColor: '#2563EB',
-    created_at: new Date('2026-09-01').toISOString(),
-    pin: '1234',
-  },
-  {
-    id: 'user_suresh',
-    name: 'Suresh',
-    emailOrPhone: '9876543211',
-    avatarColor: '#7C3AED',
-    created_at: new Date('2026-09-01').toISOString(),
-    pin: '1234',
-  },
-];
-
 export async function getStoredUsers(): Promise<UserAccount[]> {
+  // 1. Try to fetch from Neon DB
+  try {
+    const neonUsers = await fetchAllUsersFromNeon();
+    if (neonUsers && neonUsers.length > 0) {
+      await AsyncStorage.setItem(
+        STORAGE_KEY_ALL_ACCOUNTS,
+        JSON.stringify(neonUsers)
+      );
+      return neonUsers;
+    }
+  } catch (err) {
+    console.warn('Error reading users from Neon DB, using local storage:', err);
+  }
+
+  // 2. Fall back to local AsyncStorage cache
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY_ALL_ACCOUNTS);
     if (raw) {
       const parsed: UserAccount[] = JSON.parse(raw);
-      return parsed.map((u) => ({
+      // Filter out legacy demo users if any
+      const cleaned = parsed.filter(
+        (u) => u.id !== 'user_ramesh' && u.id !== 'user_suresh'
+      );
+      return cleaned.map((u) => ({
         ...u,
         pin: u.pin || '1234',
       }));
     }
   } catch (err) {
-    console.warn('Error reading stored users:', err);
+    console.warn('Error reading stored users from local storage:', err);
   }
-  // Initialize with default demo accounts
-  await AsyncStorage.setItem(STORAGE_KEY_ALL_ACCOUNTS, JSON.stringify(DEMO_USERS));
-  return DEMO_USERS;
+
+  return [];
 }
 
 export async function getCurrentUser(): Promise<UserAccount | null> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY_AUTH_USER);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed: UserAccount = JSON.parse(raw);
+      if (parsed.id === 'user_ramesh' || parsed.id === 'user_suresh') {
+        // Clear out old demo session
+        await AsyncStorage.removeItem(STORAGE_KEY_AUTH_USER);
+        return null;
+      }
+      return parsed;
     }
   } catch (err) {
     console.warn('Error reading current user:', err);
   }
-  // Default to Ramesh logged in on initial launch for seamless first-time experience
-  await setCurrentUser(DEMO_USERS[0]);
-  return DEMO_USERS[0];
+  return null;
 }
 
 export async function setCurrentUser(user: UserAccount | null): Promise<void> {
@@ -81,10 +89,36 @@ export async function login(
     return { success: false, message: 'PIN or password must be at least 4 digits.' };
   }
 
-  const users = await getStoredUsers();
   const normalized = emailOrPhone.trim().toLowerCase();
   const trimmedPin = passwordOrPin.trim();
 
+  // 1. Try querying Neon DB directly
+  try {
+    const neonUser = await fetchUserFromNeon(normalized);
+    if (neonUser) {
+      const expectedPin = neonUser.pin || '1234';
+      if (expectedPin !== trimmedPin) {
+        return {
+          success: false,
+          message: 'Incorrect PIN or password. Please try again.',
+        };
+      }
+      await setCurrentUser(neonUser);
+      // Cache locally
+      const cached = await getStoredUsers();
+      const updated = [neonUser, ...cached.filter((u) => u.id !== neonUser.id)];
+      await AsyncStorage.setItem(
+        STORAGE_KEY_ALL_ACCOUNTS,
+        JSON.stringify(updated)
+      );
+      return { success: true, user: neonUser };
+    }
+  } catch (err) {
+    console.warn('Neon DB login lookup failed, checking local cache:', err);
+  }
+
+  // 2. Fall back to local AsyncStorage cache
+  const users = await getStoredUsers();
   const found = users.find(
     (u) =>
       u.emailOrPhone.toLowerCase() === normalized ||
@@ -105,6 +139,9 @@ export async function login(
       message: 'Incorrect PIN or password. Please try again.',
     };
   }
+
+  // Sync to Neon DB in background if it wasn't there
+  upsertUserToNeon(found).catch(() => {});
 
   await setCurrentUser(found);
   return { success: true, user: found };
@@ -128,23 +165,40 @@ export async function signup(
     return { success: false, message: 'PIN or password must be at least 4 digits.' };
   }
 
-  const users = await getStoredUsers();
   const normalized = emailOrPhone.trim().toLowerCase();
   const trimmedPin = passwordOrPin.trim();
 
+  // Check if account already exists in Neon DB
+  try {
+    const existingNeonUser = await fetchUserFromNeon(normalized);
+    if (existingNeonUser) {
+      if (existingNeonUser.pin === trimmedPin) {
+        await setCurrentUser(existingNeonUser);
+        return { success: true, user: existingNeonUser };
+      }
+      return {
+        success: false,
+        message: 'An account with this email/mobile already exists. Please log in.',
+      };
+    }
+  } catch (err) {
+    console.warn('Neon DB check during signup failed, proceeding with local check:', err);
+  }
+
+  // Check if exists in local storage
+  const users = await getStoredUsers();
   const exists = users.find(
     (u) => u.emailOrPhone.toLowerCase() === normalized
   );
   if (exists) {
-    const expectedPin = exists.pin || '1234';
-    if (expectedPin !== trimmedPin) {
-      return {
-        success: false,
-        message: 'An account with this email/mobile already exists with a different PIN. Please log in.',
-      };
+    if (exists.pin === trimmedPin) {
+      await setCurrentUser(exists);
+      return { success: true, user: exists };
     }
-    await setCurrentUser(exists);
-    return { success: true, user: exists };
+    return {
+      success: false,
+      message: 'An account with this email/mobile already exists. Please log in.',
+    };
   }
 
   const colors = ['#059669', '#D97706', '#2563EB', '#7C3AED', '#DC2626', '#0891B2'];
@@ -159,18 +213,24 @@ export async function signup(
     pin: trimmedPin,
   };
 
-  const updatedUsers = [...users, newUser];
+  // 1. Insert into Neon PostgreSQL
+  try {
+    await upsertUserToNeon(newUser);
+    console.log('✅ User successfully inserted into Neon DB:', newUser.name, newUser.emailOrPhone);
+  } catch (dbErr: any) {
+    console.error('❌ Failed to insert user into Neon DB:', dbErr);
+    return {
+      success: false,
+      message: `Failed to save user to database: ${dbErr?.message || 'Connection error'}. Please verify database connection.`,
+    };
+  }
+
+  // 2. Cache in local AsyncStorage
+  const updatedUsers = [newUser, ...users.filter((u) => u.id !== newUser.id)];
   await AsyncStorage.setItem(STORAGE_KEY_ALL_ACCOUNTS, JSON.stringify(updatedUsers));
   await setCurrentUser(newUser);
 
   return { success: true, user: newUser };
-}
-
-export async function demoLogin(userId: string): Promise<UserAccount> {
-  const users = await getStoredUsers();
-  const target = users.find((u) => u.id === userId) || DEMO_USERS[0];
-  await setCurrentUser(target);
-  return target;
 }
 
 export async function logout(): Promise<void> {

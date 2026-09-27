@@ -16,7 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { Colors } from '../theme/colors';
 
 export const AuthScreen: React.FC = () => {
-  const { handleLogin, handleSignup, quickDemoLogin } = useAuth();
+  const { handleLogin, handleSignup } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [name, setName] = useState('');
@@ -210,48 +210,6 @@ export const AuthScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
           </View>
-
-          {/* Quick Demo Shortcuts for Testing */}
-          <View style={styles.demoSection}>
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>QUICK DEMO ACCESS</Text>
-              <View style={styles.dividerLine} />
-            </View>
-            <Text style={styles.demoHint}>
-              Tap a profile to log in directly:
-            </Text>
-
-            <View style={styles.demoButtonsRow}>
-              <TouchableOpacity
-                style={[styles.demoBtn, styles.demoBtnA]}
-                onPress={() => quickDemoLogin('ramesh')}
-              >
-                <View style={styles.demoAvatarA}>
-                  <Text style={styles.demoAvatarText}>R</Text>
-                </View>
-                <View style={styles.demoBtnTextContent}>
-                  <Text style={styles.demoBtnTitle}>Ramesh</Text>
-                  <Text style={styles.demoBtnRole}>Store Owner • PIN: 1234</Text>
-                </View>
-                <Ionicons name="arrow-forward" size={16} color="#2563EB" />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.demoBtn, styles.demoBtnB]}
-                onPress={() => quickDemoLogin('suresh')}
-              >
-                <View style={styles.demoAvatarB}>
-                  <Text style={styles.demoAvatarText}>S</Text>
-                </View>
-                <View style={styles.demoBtnTextContent}>
-                  <Text style={styles.demoBtnTitle}>Suresh</Text>
-                  <Text style={styles.demoBtnRole}>Store Manager • PIN: 1234</Text>
-                </View>
-                <Ionicons name="arrow-forward" size={16} color="#7C3AED" />
-              </TouchableOpacity>
-            </View>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -391,88 +349,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '800',
-  },
-  demoSection: {
-    marginTop: 24,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 8,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#CBD5E1',
-  },
-  dividerText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.textMuted,
-    letterSpacing: 0.8,
-  },
-  demoHint: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  demoButtonsRow: {
-    gap: 10,
-  },
-  demoBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  demoBtnA: {
-    borderColor: '#BFDBFE',
-    backgroundColor: '#EFF6FF',
-  },
-  demoBtnB: {
-    borderColor: '#DDD6FE',
-    backgroundColor: '#F5F3FF',
-  },
-  demoAvatarA: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#2563EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  demoAvatarB: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#7C3AED',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  demoAvatarText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  demoBtnTextContent: {
-    flex: 1,
-  },
-  demoBtnTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-  },
-  demoBtnRole: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    marginTop: 1,
   },
   eyeBtn: {
     padding: 6,

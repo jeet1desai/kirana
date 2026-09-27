@@ -20,12 +20,23 @@ import {
   loadProducts,
   loadPriceHistory,
   loadActivityLogs,
+  saveProducts,
+  savePriceHistory,
+  saveActivityLogs,
   loadUsers,
   loadActiveUser,
   saveActiveUser,
   saveUsers,
   resetToDefaultData,
+  purgeLegacyDummyDataOnce,
 } from "../services/storageService";
+import {
+  fetchProductsFromNeon,
+  fetchPriceHistoryFromNeon,
+  fetchActivityLogsFromNeon,
+  deleteProductFromNeon,
+  insertActivityLogToNeon,
+} from "../services/neonClient";
 import { syncService } from "../services/syncService";
 import {
   initSupabaseClient,
@@ -124,39 +135,66 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
   // Initial load or workspace change
   useEffect(() => {
     async function init() {
-      const [initProds, initHist, initLogs, initUsers, initActiveUser] =
-        await Promise.all([
-          loadProducts(),
-          loadPriceHistory(),
-          loadActivityLogs(),
-          loadUsers(),
-          loadActiveUser(),
-        ]);
+      // 1. Purge any legacy dummy data from earlier demo runs
+      await purgeLegacyDummyDataOnce();
 
-      // Filter by active workspace if workspace_id is present
-      const currentWsId = activeWorkspace?.id;
-      const wsProds = currentWsId
-        ? initProds.filter(
-            (p) => !p.workspace_id || p.workspace_id === currentWsId,
-          )
-        : initProds;
-      const wsHist = currentWsId
-        ? initHist.filter(
-            (h) => !h.workspace_id || h.workspace_id === currentWsId,
-          )
-        : initHist;
-      const wsLogs = currentWsId
-        ? initLogs.filter(
-            (l) => !l.workspace_id || l.workspace_id === currentWsId,
-          )
-        : initLogs;
-
-      setProducts(wsProds);
-      setPriceHistory(wsHist);
-      setActivityLogs(wsLogs);
+      const [initUsers, initActiveUser] = await Promise.all([
+        loadUsers(),
+        loadActiveUser(),
+      ]);
       setUsers(initUsers);
       if (!currentUser) {
         setActiveUser(initActiveUser);
+      }
+
+      const currentWsId = activeWorkspace?.id;
+
+      // 2. Fetch live data directly from Neon PostgreSQL
+      try {
+        const [neonProds, neonHist, neonLogs] = await Promise.all([
+          fetchProductsFromNeon(currentWsId),
+          fetchPriceHistoryFromNeon(undefined, 50),
+          fetchActivityLogsFromNeon(50),
+        ]);
+
+        setProducts(neonProds);
+        setPriceHistory(neonHist);
+        setActivityLogs(neonLogs);
+
+        await Promise.all([
+          saveProducts(neonProds),
+          savePriceHistory(neonHist),
+          saveActivityLogs(neonLogs),
+        ]);
+        setSyncStatus("connected");
+      } catch (neonErr) {
+        console.warn("Neon DB fetch failed, falling back to local cache:", neonErr);
+        const [initProds, initHist, initLogs] = await Promise.all([
+          loadProducts(),
+          loadPriceHistory(),
+          loadActivityLogs(),
+        ]);
+
+        const wsProds = currentWsId
+          ? initProds.filter(
+              (p) => !p.workspace_id || p.workspace_id === currentWsId,
+            )
+          : initProds;
+        const wsHist = currentWsId
+          ? initHist.filter(
+              (h) => !h.workspace_id || h.workspace_id === currentWsId,
+            )
+          : initHist;
+        const wsLogs = currentWsId
+          ? initLogs.filter(
+              (l) => !l.workspace_id || l.workspace_id === currentWsId,
+            )
+          : initLogs;
+
+        setProducts(wsProds);
+        setPriceHistory(wsHist);
+        setActivityLogs(wsLogs);
+        setSyncStatus("local");
       }
 
       // Check for Supabase
@@ -502,6 +540,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setProducts(newProducts);
       setActivityLogs(newLogs);
+      await saveProducts(newProducts);
+      await saveActivityLogs(newLogs);
+
+      try {
+        await deleteProductFromNeon(productId);
+        await insertActivityLogToNeon(activityItem);
+      } catch (err) {
+        console.warn("Failed to delete product from Neon DB:", err);
+      }
     },
     [products, activityLogs, activeUser],
   );
