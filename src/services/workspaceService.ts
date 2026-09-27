@@ -171,7 +171,11 @@ export async function createWorkspace(
   try {
     await upsertWorkspaceToNeon(newWs);
     await upsertMemberToNeon(newMember);
-    console.log("✅ Workspace and owner saved to Neon DB:", newWs.name, newWs.joinCode);
+    console.log(
+      "✅ Workspace and owner saved to Neon DB:",
+      newWs.name,
+      newWs.joinCode,
+    );
   } catch (neonErr: any) {
     console.error("❌ Failed to sync new workspace to Neon DB:", neonErr);
     return {

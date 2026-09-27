@@ -7,12 +7,7 @@ import {
   useCallback,
 } from "react";
 import { UserAccount, Workspace } from "../types";
-import {
-  getCurrentUser,
-  login,
-  signup,
-  logout,
-} from "../services/authService";
+import { getCurrentUser, login, signup, logout } from "../services/authService";
 import {
   getActiveWorkspace,
   getUserWorkspaces,
@@ -64,17 +59,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setIsLoading(true);
       try {
         const user = await getCurrentUser();
-        setCurrentUserState(user);
 
         if (user) {
           const [activeWs, allWs] = await Promise.all([
             getActiveWorkspace(user.id),
             getUserWorkspaces(user.id),
           ]);
-          setActiveWorkspaceState(
-            activeWs || (allWs.length > 0 ? allWs[0] : null),
-          );
+          const targetWs = activeWs || (allWs.length > 0 ? allWs[0] : null);
+
+          // Atomic state updates to prevent intermediate flashing
+          setCurrentUserState(user);
+          setActiveWorkspaceState(targetWs);
           setUserWorkspaces(allWs);
+        } else {
+          setCurrentUserState(null);
+          setActiveWorkspaceState(null);
+          setUserWorkspaces([]);
         }
       } catch (err) {
         console.warn("Error initializing auth & workspace:", err);
@@ -98,12 +98,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const handleLogin = useCallback(async (emailOrPhone: string, pin: string) => {
     const res = await login(emailOrPhone, pin);
     if (res.success && res.user) {
-      setCurrentUserState(res.user);
+      // 1. Fetch user's workspaces BEFORE setting any state so WorkspaceSetupScreen never flashes
       const [activeWs, allWs] = await Promise.all([
         getActiveWorkspace(res.user.id),
         getUserWorkspaces(res.user.id),
       ]);
-      setActiveWorkspaceState(activeWs || null);
+      const targetWs = activeWs || (allWs.length > 0 ? allWs[0] : null);
+
+      // 2. Batch update state atomically
+      setCurrentUserState(res.user);
+      setActiveWorkspaceState(targetWs);
       setUserWorkspaces(allWs);
       return { success: true };
     }
@@ -114,12 +118,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     async (name: string, emailOrPhone: string, pin: string) => {
       const res = await signup(name, emailOrPhone, pin);
       if (res.success && res.user) {
-        setCurrentUserState(res.user);
+        // Fetch workspaces for newly created / matched user
         const [activeWs, allWs] = await Promise.all([
           getActiveWorkspace(res.user.id),
           getUserWorkspaces(res.user.id),
         ]);
-        setActiveWorkspaceState(activeWs || null);
+        const targetWs = activeWs || (allWs.length > 0 ? allWs[0] : null);
+
+        // Batch update state atomically
+        setCurrentUserState(res.user);
+        setActiveWorkspaceState(targetWs);
         setUserWorkspaces(allWs);
         return { success: true };
       }

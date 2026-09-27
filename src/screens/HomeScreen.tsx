@@ -6,13 +6,15 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  SafeAreaView,
   Platform,
   StatusBar,
   Modal,
+  RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useStore } from "../context/StoreContext";
+import { useAuth } from "../context/AuthContext";
 import { Colors } from "../theme/colors";
 import { Product, ProductVariant } from "../types";
 
@@ -28,8 +30,26 @@ import { WorkspaceModal } from "../components/WorkspaceModal";
 import { WorkspaceSetupScreen } from "./WorkspaceSetupScreen";
 
 export const HomeScreen: React.FC = () => {
-  const { products, searchQuery, currentNotification, dismissNotification } =
-    useStore();
+  const {
+    products,
+    searchQuery,
+    currentNotification,
+    dismissNotification,
+    refreshData,
+  } = useStore();
+  const { refreshWorkspaces } = useAuth();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([refreshData(), refreshWorkspaces()]);
+    } catch (err) {
+      console.warn("Pull to refresh error:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Modals state
   const [selectedProductForPrice, setSelectedProductForPrice] = useState<{
@@ -58,7 +78,7 @@ export const HomeScreen: React.FC = () => {
   }, [products, searchQuery]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Real-Time Sync Notification Toast */}
@@ -95,6 +115,14 @@ export const HomeScreen: React.FC = () => {
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              colors={[Colors.primary]}
+              tintColor={Colors.primary}
+            />
+          }
           ListHeaderComponent={
             <View style={styles.resultsBar}>
               <Text style={styles.resultsText}>
@@ -204,7 +232,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
   container: {
     flex: 1,

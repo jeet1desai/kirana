@@ -1,5 +1,5 @@
-import * as React from 'react';
-import { useState } from 'react';
+import * as React from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -9,60 +9,60 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  SafeAreaView,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
-import { Colors } from '../theme/colors';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../context/AuthContext";
+import { Colors } from "../theme/colors";
 
 export const AuthScreen: React.FC = () => {
   const { handleLogin, handleSignup } = useAuth();
 
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const [name, setName] = useState('');
-  const [emailOrPhone, setEmailOrPhone] = useState('');
-  const [pin, setPin] = useState('');
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [name, setName] = useState("");
+  const [emailOrPhone, setEmailOrPhone] = useState("");
+  const [pin, setPin] = useState("");
   const [showPin, setShowPin] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onSubmit = async () => {
-    setErrorMessage('');
-    if (mode === 'signup' && !name.trim()) {
-      setErrorMessage('Please enter your full name');
+    setErrorMessage("");
+    if (mode === "signup" && !name.trim()) {
+      setErrorMessage("Please enter your full name");
       return;
     }
 
     if (!emailOrPhone.trim()) {
-      setErrorMessage('Please enter your mobile number or email');
+      setErrorMessage("Please enter your mobile number or email");
       return;
     }
 
     if (!pin.trim()) {
       setErrorMessage(
-        mode === 'signup'
-          ? 'Please create a 4-digit PIN / password'
-          : 'Please enter your 4-digit PIN / password'
+        mode === "signup"
+          ? "Please create a 4-digit PIN / password"
+          : "Please enter your 4-digit PIN / password",
       );
       return;
     }
 
     if (pin.trim().length < 4) {
-      setErrorMessage('PIN / password must be at least 4 digits');
+      setErrorMessage("PIN / password must be at least 4 digits");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      if (mode === 'signup') {
+      if (mode === "signup") {
         const res = await handleSignup(name, emailOrPhone, pin);
         if (!res.success) {
-          setErrorMessage(res.message || 'Signup failed');
+          setErrorMessage(res.message || "Signup failed");
         }
       } else {
         const res = await handleLogin(emailOrPhone, pin);
         if (!res.success) {
-          setErrorMessage(res.message || 'Invalid credentials');
+          setErrorMessage(res.message || "Invalid credentials");
         }
       }
     } finally {
@@ -71,12 +71,15 @@ export const AuthScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Brand Header */}
           <View style={styles.brandingBox}>
             <View style={styles.logoBadge}>
@@ -91,25 +94,35 @@ export const AuthScreen: React.FC = () => {
           {/* Tab Switcher */}
           <View style={styles.tabContainer}>
             <TouchableOpacity
-              style={[styles.tabBtn, mode === 'login' && styles.tabBtnActive]}
+              style={[styles.tabBtn, mode === "login" && styles.tabBtnActive]}
               onPress={() => {
-                setMode('login');
-                setErrorMessage('');
+                setMode("login");
+                setErrorMessage("");
               }}
             >
-              <Text style={[styles.tabText, mode === 'login' && styles.tabTextActive]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  mode === "login" && styles.tabTextActive,
+                ]}
+              >
                 Log In
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.tabBtn, mode === 'signup' && styles.tabBtnActive]}
+              style={[styles.tabBtn, mode === "signup" && styles.tabBtnActive]}
               onPress={() => {
-                setMode('signup');
-                setErrorMessage('');
+                setMode("signup");
+                setErrorMessage("");
               }}
             >
-              <Text style={[styles.tabText, mode === 'signup' && styles.tabTextActive]}>
+              <Text
+                style={[
+                  styles.tabText,
+                  mode === "signup" && styles.tabTextActive,
+                ]}
+              >
                 Create Account
               </Text>
             </TouchableOpacity>
@@ -124,11 +137,16 @@ export const AuthScreen: React.FC = () => {
               </View>
             ) : null}
 
-            {mode === 'signup' && (
+            {mode === "signup" && (
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>YOUR FULL NAME *</Text>
                 <View style={styles.inputWrapper}>
-                  <Ionicons name="person-outline" size={18} color={Colors.textMuted} style={styles.fieldIcon} />
+                  <Ionicons
+                    name="person-outline"
+                    size={18}
+                    color={Colors.textMuted}
+                    style={styles.fieldIcon}
+                  />
                   <TextInput
                     style={styles.textInput}
                     placeholder="e.g. Ramesh Gupta"
@@ -143,7 +161,12 @@ export const AuthScreen: React.FC = () => {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>MOBILE NUMBER OR EMAIL *</Text>
               <View style={styles.inputWrapper}>
-                <Ionicons name="call-outline" size={18} color={Colors.textMuted} style={styles.fieldIcon} />
+                <Ionicons
+                  name="call-outline"
+                  size={18}
+                  color={Colors.textMuted}
+                  style={styles.fieldIcon}
+                />
                 <TextInput
                   style={styles.textInput}
                   placeholder="e.g. 9876543210 or name@store.com"
@@ -158,16 +181,23 @@ export const AuthScreen: React.FC = () => {
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>
-                {mode === 'login' ? '4-DIGIT PIN / PASSWORD *' : 'CREATE 4-DIGIT PIN / PASSWORD *'}
+                {mode === "login"
+                  ? "4-DIGIT PIN / PASSWORD *"
+                  : "CREATE 4-DIGIT PIN / PASSWORD *"}
               </Text>
               <View style={styles.inputWrapper}>
-                <Ionicons name="lock-closed-outline" size={18} color={Colors.textMuted} style={styles.fieldIcon} />
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={18}
+                  color={Colors.textMuted}
+                  style={styles.fieldIcon}
+                />
                 <TextInput
                   style={styles.textInput}
                   placeholder={
-                    mode === 'login'
-                      ? 'Enter 4-digit PIN or password'
-                      : 'Set 4-digit PIN or password (min 4)'
+                    mode === "login"
+                      ? "Enter 4-digit PIN or password"
+                      : "Set 4-digit PIN or password (min 4)"
                   }
                   placeholderTextColor={Colors.textMuted}
                   value={pin}
@@ -180,10 +210,10 @@ export const AuthScreen: React.FC = () => {
                   onPress={() => setShowPin(!showPin)}
                   style={styles.eyeBtn}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityLabel={showPin ? 'Hide PIN' : 'Show PIN'}
+                  accessibilityLabel={showPin ? "Hide PIN" : "Show PIN"}
                 >
                   <Ionicons
-                    name={showPin ? 'eye-off-outline' : 'eye-outline'}
+                    name={showPin ? "eye-off-outline" : "eye-outline"}
                     size={18}
                     color={Colors.textMuted}
                   />
@@ -192,21 +222,26 @@ export const AuthScreen: React.FC = () => {
             </View>
 
             <TouchableOpacity
-              style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
+              style={[
+                styles.submitBtn,
+                isSubmitting && styles.submitBtnDisabled,
+              ]}
               onPress={onSubmit}
               disabled={isSubmitting}
             >
               <Ionicons
-                name={mode === 'login' ? 'log-in-outline' : 'person-add-outline'}
+                name={
+                  mode === "login" ? "log-in-outline" : "person-add-outline"
+                }
                 size={20}
                 color="#FFFFFF"
               />
               <Text style={styles.submitBtnText}>
                 {isSubmitting
-                  ? 'Please wait...'
-                  : mode === 'login'
-                  ? 'Log In to Store'
-                  : 'Create Store Account'}
+                  ? "Please wait..."
+                  : mode === "login"
+                    ? "Log In to Store"
+                    : "Create Store Account"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -219,7 +254,7 @@ export const AuthScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   container: {
     flex: 1,
@@ -229,7 +264,7 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   brandingBox: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 24,
     marginTop: 10,
   },
@@ -238,26 +273,26 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 18,
     backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 12,
   },
   appTitle: {
     fontSize: 26,
-    fontWeight: '900',
+    fontWeight: "900",
     color: Colors.textPrimary,
     letterSpacing: -0.5,
   },
   appSubtitle: {
     fontSize: 13,
     color: Colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 4,
     maxWidth: 280,
   },
   tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
+    flexDirection: "row",
+    backgroundColor: "#E2E8F0",
     borderRadius: 12,
     padding: 4,
     marginBottom: 16,
@@ -265,22 +300,22 @@ const styles = StyleSheet.create({
   tabBtn: {
     flex: 1,
     paddingVertical: 10,
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 9,
   },
   tabBtnActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: "#CBD5E1",
   },
   tabText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: Colors.textSecondary,
   },
   tabTextActive: {
     color: Colors.textPrimary,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   formCard: {
     backgroundColor: Colors.card,
@@ -290,9 +325,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEE2E2',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEE2E2",
     padding: 10,
     borderRadius: 8,
     marginBottom: 12,
@@ -301,7 +336,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     color: Colors.danger,
-    fontWeight: '600',
+    fontWeight: "600",
     flex: 1,
   },
   inputGroup: {
@@ -309,15 +344,15 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     color: Colors.textSecondary,
     marginBottom: 6,
     letterSpacing: 0.5,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: 10,
@@ -333,9 +368,9 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   submitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: Colors.primary,
     paddingVertical: 14,
     borderRadius: 12,
@@ -346,9 +381,9 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitBtnText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   eyeBtn: {
     padding: 6,

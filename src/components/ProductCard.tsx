@@ -1,6 +1,12 @@
 import * as React from "react";
 import { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Product, ProductVariant } from "../types";
 import { Colors } from "../theme/colors";
@@ -95,8 +101,24 @@ export const ProductCard: React.FC<Props> = ({
       {/* Pricing Section: Multiple Units vs Single Unit */}
       {hasMultipleVariants ? (
         <View style={styles.multiVariantsSection}>
-          <Text style={styles.multiVariantsLabel}>PACK SIZES & PRICES</Text>
-          <View style={styles.variantsGrid}>
+          <View style={styles.variantsHeaderRow}>
+            <Text style={styles.multiVariantsLabel}>PACK SIZES & PRICES</Text>
+            {variants.length > 3 && (
+              <View style={styles.scrollHintBadge}>
+                <Text style={styles.scrollHintText}>Swipe for more</Text>
+                <Ionicons
+                  name="arrow-forward"
+                  size={10}
+                  color={Colors.textMuted}
+                />
+              </View>
+            )}
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.variantsScrollContent}
+          >
             {variants.map((v, idx) => {
               const isSelected = safeIndex === idx;
               return (
@@ -107,7 +129,11 @@ export const ProductCard: React.FC<Props> = ({
                     isSelected && styles.variantCardItemSelected,
                   ]}
                   onPress={() => {
-                    setSelectedVariantIndex(idx);
+                    if (isSelected) {
+                      onEditPrice(product, v);
+                    } else {
+                      setSelectedVariantIndex(idx);
+                    }
                   }}
                   activeOpacity={0.7}
                 >
@@ -144,10 +170,20 @@ export const ProductCard: React.FC<Props> = ({
                       {v.selling_price}
                     </Text>
                   </View>
+                  {isSelected && (
+                    <View style={styles.selectedIndicator}>
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={11}
+                        color={Colors.primary}
+                      />
+                      <Text style={styles.selectedIndicatorText}>Active</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
         </View>
       ) : (
         <View style={styles.priceSection}>
@@ -275,30 +311,46 @@ const styles = StyleSheet.create({
   multiVariantsSection: {
     backgroundColor: "#F8FAFC",
     borderRadius: 14,
-    padding: 10,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: "#F1F5F9",
+  },
+  variantsHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
   },
   multiVariantsLabel: {
     fontSize: 10,
     fontWeight: "800",
     color: Colors.textMuted,
     letterSpacing: 0.5,
-    marginBottom: 8,
   },
-  variantsGrid: {
+  scrollHintBadge: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 3,
+  },
+  scrollHintText: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    fontWeight: "600",
+  },
+  variantsScrollContent: {
+    flexDirection: "row",
     gap: 8,
+    paddingRight: 6,
   },
   variantCardItem: {
-    flex: 1,
-    minWidth: 80,
+    width: 86,
     backgroundColor: "#FFFFFF",
     borderRadius: 10,
     paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     borderWidth: 1.5,
     borderColor: "#E2E8F0",
     alignItems: "center",
@@ -307,6 +359,11 @@ const styles = StyleSheet.create({
   variantCardItemSelected: {
     borderColor: Colors.primary,
     backgroundColor: "#F0FDF4",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 1,
   },
   variantUnitPill: {
     backgroundColor: "#F1F5F9",
@@ -345,6 +402,17 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   variantPriceNumberSelected: {
+    color: Colors.primary,
+  },
+  selectedIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    marginTop: 3,
+  },
+  selectedIndicatorText: {
+    fontSize: 9,
+    fontWeight: "700",
     color: Colors.primary,
   },
   categoryBadge: {

@@ -21,10 +21,10 @@ function getSql() {
     const url = NEON_DATABASE_URL;
     if (!url) {
       console.warn(
-        "⚠️ NEON_DATABASE_URL is not set. Please define EXPO_PUBLIC_NEON_DATABASE_URL in your .env file."
+        "⚠️ NEON_DATABASE_URL is not set. Please define EXPO_PUBLIC_NEON_DATABASE_URL in your .env file.",
       );
       throw new Error(
-        "Database URL not configured. Please define EXPO_PUBLIC_NEON_DATABASE_URL in .env"
+        "Database URL not configured. Please define EXPO_PUBLIC_NEON_DATABASE_URL in .env",
       );
     }
     sqlInstance = neon(url, {
@@ -331,7 +331,9 @@ export async function fetchWorkspacesFromNeon(): Promise<Workspace[]> {
       joinCode: r.join_code,
       ownerId: r.owner_id,
       ownerName: r.owner_name,
-      created_at: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+      created_at: r.created_at
+        ? new Date(r.created_at).toISOString()
+        : new Date().toISOString(),
     }));
   } catch (err) {
     console.error("Error fetching workspaces from Neon DB:", err);
@@ -371,7 +373,9 @@ export async function upsertWorkspaceToNeon(ws: Workspace): Promise<void> {
 /**
  * Fetch workspace members from Neon DB
  */
-export async function fetchMembersFromNeon(workspaceId?: string): Promise<WorkspaceMember[]> {
+export async function fetchMembersFromNeon(
+  workspaceId?: string,
+): Promise<WorkspaceMember[]> {
   try {
     let rows: any[];
     if (workspaceId) {
@@ -392,7 +396,9 @@ export async function fetchMembersFromNeon(workspaceId?: string): Promise<Worksp
       userId: r.user_id,
       userName: r.user_name,
       role: r.role as "Owner" | "Manager" | "Staff",
-      joined_at: r.joined_at ? new Date(r.joined_at).toISOString() : new Date().toISOString(),
+      joined_at: r.joined_at
+        ? new Date(r.joined_at).toISOString()
+        : new Date().toISOString(),
     }));
   } catch (err) {
     console.error("Error fetching members from Neon DB:", err);
@@ -407,7 +413,9 @@ export function isNeonConfigured(): boolean {
 /**
  * Upsert workspace member into Neon DB
  */
-export async function upsertMemberToNeon(member: WorkspaceMember): Promise<void> {
+export async function upsertMemberToNeon(
+  member: WorkspaceMember,
+): Promise<void> {
   try {
     const joinedAt = member.joined_at || new Date().toISOString();
     await sql`
@@ -435,7 +443,7 @@ export async function upsertMemberToNeon(member: WorkspaceMember): Promise<void>
  * Fetch a single user by email or phone from Neon DB
  */
 export async function fetchUserFromNeon(
-  emailOrPhone: string
+  emailOrPhone: string,
 ): Promise<UserAccount | null> {
   try {
     const normalized = emailOrPhone.trim().toLowerCase();
@@ -514,4 +522,3 @@ export async function upsertUserToNeon(user: UserAccount): Promise<void> {
     throw err;
   }
 }
-

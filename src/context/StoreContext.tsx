@@ -90,6 +90,7 @@ interface StoreContextValue {
   disconnectSupabase: () => Promise<void>;
   resetData: () => Promise<void>;
   getProductHistory: (productId: string) => PriceHistory[];
+  refreshData: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextValue | undefined>(undefined);
@@ -104,10 +105,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [activeUser, setActiveUser] = useState<UserProfile>({
-    id: currentUser?.id || "user_ramesh",
-    name: currentUser?.name || "Ramesh",
+    id: currentUser?.id || "user_owner",
+    name: currentUser?.name || "Store Owner",
     role: "Admin",
-    shortName: currentUser?.name ? currentUser.name.split(" ")[0] : "Ramesh",
+    shortName: currentUser?.name ? currentUser.name.split(" ")[0] : "Owner",
     color: currentUser?.avatarColor || "#2563EB",
   });
 
@@ -168,7 +169,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
         ]);
         setSyncStatus("connected");
       } catch (neonErr) {
-        console.warn("Neon DB fetch failed, falling back to local cache:", neonErr);
+        console.warn(
+          "Neon DB fetch failed, falling back to local cache:",
+          neonErr,
+        );
         const [initProds, initHist, initLogs] = await Promise.all([
           loadProducts(),
           loadPriceHistory(),
@@ -629,6 +633,59 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
     [priceHistory],
   );
 
+  const refreshData = useCallback(async () => {
+    const currentWsId = activeWorkspace?.id;
+    try {
+      const [neonProds, neonHist, neonLogs] = await Promise.all([
+        fetchProductsFromNeon(currentWsId),
+        fetchPriceHistoryFromNeon(undefined, 50),
+        fetchActivityLogsFromNeon(50),
+      ]);
+
+      setProducts(neonProds);
+      setPriceHistory(neonHist);
+      setActivityLogs(neonLogs);
+
+      await Promise.all([
+        saveProducts(neonProds),
+        savePriceHistory(neonHist),
+        saveActivityLogs(neonLogs),
+      ]);
+      setSyncStatus("connected");
+    } catch (neonErr) {
+      console.warn(
+        "Neon DB refresh failed, falling back to local cache:",
+        neonErr,
+      );
+      const [initProds, initHist, initLogs] = await Promise.all([
+        loadProducts(),
+        loadPriceHistory(),
+        loadActivityLogs(),
+      ]);
+
+      const wsProds = currentWsId
+        ? initProds.filter(
+            (p) => !p.workspace_id || p.workspace_id === currentWsId,
+          )
+        : initProds;
+      const wsHist = currentWsId
+        ? initHist.filter(
+            (h) => !h.workspace_id || h.workspace_id === currentWsId,
+          )
+        : initHist;
+      const wsLogs = currentWsId
+        ? initLogs.filter(
+            (l) => !l.workspace_id || l.workspace_id === currentWsId,
+          )
+        : initLogs;
+
+      setProducts(wsProds);
+      setPriceHistory(wsHist);
+      setActivityLogs(wsLogs);
+      setSyncStatus("local");
+    }
+  }, [activeWorkspace?.id]);
+
   const value: StoreContextValue = {
     products,
     priceHistory,
@@ -655,6 +712,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({
     disconnectSupabase,
     resetData,
     getProductHistory,
+    refreshData,
   };
 
   return (
