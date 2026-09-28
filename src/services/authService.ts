@@ -82,7 +82,7 @@ export async function login(
   if (!emailOrPhone.trim()) {
     return {
       success: false,
-      message: "Please enter your mobile number or email.",
+      message: "Please enter your mobile number.",
     };
   }
   if (!passwordOrPin || !passwordOrPin.trim()) {
@@ -165,7 +165,7 @@ export async function signup(
     return { success: false, message: "Please enter your name." };
   }
   if (!emailOrPhone.trim()) {
-    return { success: false, message: "Please enter your mobile or email." };
+    return { success: false, message: "Please enter your mobile number." };
   }
   if (!passwordOrPin || !passwordOrPin.trim()) {
     return { success: false, message: "Please set a 4-digit PIN or password." };
@@ -191,7 +191,7 @@ export async function signup(
       return {
         success: false,
         message:
-          "An account with this email/mobile already exists. Please log in.",
+          "An account with this mobile number already exists. Please log in.",
       };
     }
   } catch (err) {
@@ -212,7 +212,7 @@ export async function signup(
     return {
       success: false,
       message:
-        "An account with this email/mobile already exists. Please log in.",
+        "An account with this mobile number already exists. Please log in.",
     };
   }
 
